@@ -7,3 +7,6 @@
 /InventorySystem/obj/Debug
 /InventorySystem/.vs/InventorySystem
 /InventorySystem/packages
+/InventorySystem/.vs
+/InventorySystem/obj/Release
+/InventorySystem/Web.config
