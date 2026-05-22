@@ -1,69 +1,52 @@
-﻿<%@ Master Language="C#" AutoEventWireup="true" CodeBehind="Site.master.cs" Inherits="InventorySystem.SiteMaster" %>
+﻿<%@ Master Language="C#" AutoEventWireup="true" CodeBehind="Site.master.cs" Inherits="InventorySystem.Site" %>
 
 <!DOCTYPE html>
-
-<html lang="en">
+<html>
 <head runat="server">
-    <meta charset="utf-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title><%: Page.Title %> - My ASP.NET Application</title>
-
-    <asp:PlaceHolder runat="server">
-        <%: Scripts.Render("~/bundles/modernizr") %>
-    </asp:PlaceHolder>
-
-    <webopt:bundlereference runat="server" path="~/Content/css" />
-    <link href="~/favicon.ico" rel="shortcut icon" type="image/x-icon" />
-
+    <title>StackNet IMS</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet" />
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.5/font/bootstrap-icons.css" rel="stylesheet" />
+    <style>
+        body { background-color: #f8f9fa; }
+        .sidebar { background-color: #1a2235; min-height: 100vh; color: #a1a1aa; font-size: 0.9rem; }
+        .sidebar a { color: #a1a1aa; text-decoration: none; padding: 10px 20px; display: block; border-radius: 5px; margin: 2px 15px; }
+        .sidebar a:hover, .sidebar a.active { background-color: #2d3748; color: #fff; }
+        .sidebar-heading { font-size: 0.7rem; font-weight: bold; text-transform: uppercase; letter-spacing: 1px; margin: 20px 20px 10px; color: #6b7280; }
+        .main-content { padding: 30px; }
+    </style>
+    <asp:ContentPlaceHolder ID="head" runat="server"></asp:ContentPlaceHolder>
 </head>
 <body>
-    <form runat="server">
-        <asp:ScriptManager runat="server">
-            <Scripts>
-                <%--To learn more about bundling scripts in ScriptManager see https://go.microsoft.com/fwlink/?LinkID=301884 --%>
-                <%--Framework Scripts--%>
-                <asp:ScriptReference Name="MsAjaxBundle" />
-                <asp:ScriptReference Name="jquery" />
-                <asp:ScriptReference Name="WebForms.js" Assembly="System.Web" Path="~/Scripts/WebForms/WebForms.js" />
-                <asp:ScriptReference Name="WebUIValidation.js" Assembly="System.Web" Path="~/Scripts/WebForms/WebUIValidation.js" />
-                <asp:ScriptReference Name="MenuStandards.js" Assembly="System.Web" Path="~/Scripts/WebForms/MenuStandards.js" />
-                <asp:ScriptReference Name="GridView.js" Assembly="System.Web" Path="~/Scripts/WebForms/GridView.js" />
-                <asp:ScriptReference Name="DetailsView.js" Assembly="System.Web" Path="~/Scripts/WebForms/DetailsView.js" />
-                <asp:ScriptReference Name="TreeView.js" Assembly="System.Web" Path="~/Scripts/WebForms/TreeView.js" />
-                <asp:ScriptReference Name="WebParts.js" Assembly="System.Web" Path="~/Scripts/WebForms/WebParts.js" />
-                <asp:ScriptReference Name="Focus.js" Assembly="System.Web" Path="~/Scripts/WebForms/Focus.js" />
-                <asp:ScriptReference Name="WebFormsBundle" />
-                <%--Site Scripts--%>
-            </Scripts>
-        </asp:ScriptManager>
-
-        <nav class="navbar navbar-expand-sm navbar-toggleable-sm navbar-dark bg-dark">
-            <div class="container">
-                <a class="navbar-brand" runat="server" href="~/">Application name</a>
-                <button type="button" class="navbar-toggler" data-bs-toggle="collapse" data-bs-target=".navbar-collapse" title="Toggle navigation" aria-controls="navbarSupportedContent"
-                    aria-expanded="false" aria-label="Toggle navigation">
-                    <span class="navbar-toggler-icon"></span>
-                </button>
-                <div class="collapse navbar-collapse d-sm-inline-flex justify-content-between">
-                    <ul class="navbar-nav flex-grow-1">
-                        <li class="nav-item"><a class="nav-link" runat="server" href="~/">Home</a></li>
-                        <li class="nav-item"><a class="nav-link" runat="server" href="~/About">About</a></li>
-                        <li class="nav-item"><a class="nav-link" runat="server" href="~/Contact">Contact</a></li>
-                    </ul>
+    <form id="form1" runat="server">
+        <div class="d-flex">
+            <div class="sidebar py-4" style="width: 250px;">
+                <div class="px-4 mb-4">
+                    <h5 class="text-white fw-bold d-flex align-items-center gap-2">
+                        <i class="bi bi-box-seam text-primary fs-4"></i> StackNet IMS
+                    </h5>
+                    <div class="small text-muted mt-2">
+                        <i class="bi bi-person-circle"></i> <asp:Label ID="lblUserName" runat="server" Text="User"></asp:Label>
+                    </div>
                 </div>
+
+                <div class="sidebar-heading">Main</div>
+                <a href="Dashboard.aspx" class="active"><i class="bi bi-grid-1x2-fill me-2"></i> Dashboard</a>
+                <a href="ProductList.aspx"><i class="bi bi-box me-2"></i> Products</a>
+                <a href="CategoryList.aspx"><i class="bi bi-tags me-2"></i> Categories</a>
+
+                <div class="sidebar-heading">Inventory</div>
+                <a href="StockIn.aspx"><i class="bi bi-arrow-down-circle me-2"></i> Stock In</a>
+                <a href="StockOut.aspx"><i class="bi bi-arrow-up-circle me-2"></i> Stock Out</a>
+                
+                <div class="sidebar-heading">Admin</div>
+                <a href="Logout.aspx" class="text-danger mt-3"><i class="bi bi-box-arrow-right me-2"></i> Logout</a>
             </div>
-        </nav>
-        <div class="container body-content">
-            <asp:ContentPlaceHolder ID="MainContent" runat="server">
-            </asp:ContentPlaceHolder>
-            <hr />
-            <footer>
-                <p>&copy; <%: DateTime.Now.Year %> - My ASP.NET Application</p>
-            </footer>
+
+            <div class="flex-grow-1 main-content">
+                <asp:ContentPlaceHolder ID="MainContent" runat="server"></asp:ContentPlaceHolder>
+            </div>
         </div>
     </form>
-    <asp:PlaceHolder runat="server">
-        <%: Scripts.Render("~/Scripts/bootstrap.js") %>
-    </asp:PlaceHolder>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 </body>
 </html>
