@@ -1,8 +1,176 @@
 ﻿<%@ Page Title="Stock Out" Language="C#" MasterPageFile="~/Site.Master" AutoEventWireup="true" CodeBehind="StockOut.aspx.cs" Inherits="InventorySystem.StockOut" %>
-<asp:Content ID="Content1" ContentPlaceHolderID="head" runat="server"></asp:Content>
+
+<asp:Content ID="Content1" ContentPlaceHolderID="head" runat="server">
+</asp:Content>
+
 <asp:Content ID="Content2" ContentPlaceHolderID="MainContent" runat="server">
-    <h4 class="fw-normal mb-4">Stock Out Operations</h4>
-    <div class="card border-0 shadow-sm p-4 rounded-3">
-        <p class="text-muted mb-0">The stock removal form will go here.</p>
+    
+    <div class="d-flex justify-content-between align-items-end mb-4 pb-3 border-bottom">
+        <div>
+            <h4 class="fw-normal mb-1">Stock Out</h4>
+            <div class="text-muted small">Inventory / Stock Out</div>
+        </div>
+        <div class="text-muted small fw-bold text-uppercase">
+            <asp:Label ID="lblTransactionRef" runat="server" Text="REF: Pending..."></asp:Label>
+        </div>
     </div>
+
+    <asp:Panel ID="pnlError" runat="server" Visible="false" CssClass="alert alert-danger d-flex align-items-center mb-4 border-0 shadow-sm">
+        <i class="bi bi-exclamation-triangle-fill me-2 fs-5"></i>
+        <asp:Label ID="lblError" runat="server" Text=""></asp:Label>
+    </asp:Panel>
+
+    <div class="row g-4">
+        
+        <div class="col-lg-7">
+            <div class="card border border-light shadow-sm p-4 rounded-3 h-100 bg-white">
+                
+                <div class="d-flex align-items-center mb-4">
+                    <div class="bg-warning bg-opacity-10 text-warning p-2 rounded-3 me-3">
+                        <i class="bi bi-box-arrow-up fs-5"></i>
+                    </div>
+                    <div>
+                        <h6 class="mb-0 fw-bold">Manual Product Selection</h6>
+                        <small class="text-muted">Choose an item to dispatch</small>
+                    </div>
+                </div>
+
+                <div class="rounded-3 p-3 mb-4 bg-warning bg-opacity-10 d-flex align-items-center justify-content-between" style="border: 2px dashed #ffc107;">
+                    <div class="d-flex align-items-center">
+                        <div class="bg-warning text-dark p-2 rounded-3 me-3">
+                            <i class="bi bi-box-seam fs-5"></i>
+                        </div>
+                        <div>
+                            <div class="fw-bold small text-dark">Select Product</div>
+                            <div class="text-muted" style="font-size: 0.75rem;">Manually choose an item</div>
+                        </div>
+                    </div>
+                    <div style="width: 250px;">
+                        <asp:DropDownList ID="ddlProduct" runat="server" CssClass="form-select fw-bold border-0 shadow-sm" AutoPostBack="true" OnSelectedIndexChanged="ddlProduct_SelectedIndexChanged">
+                        </asp:DropDownList>
+                    </div>
+                </div>
+
+                <div class="bg-light rounded-3 p-3 mb-4 border">
+                    <div class="text-muted small fw-bold text-uppercase mb-3">Product Details</div>
+                    <table class="table table-sm table-borderless mb-0 small">
+                        <tr>
+                            <td class="text-muted pb-2">Name</td>
+                            <td class="text-end pb-2">
+                                <asp:Label ID="lblProductName" runat="server" CssClass="fw-bold text-dark" Text="-"></asp:Label>
+                            </td>
+                        </tr>
+                        <tr>
+                            <td class="text-muted pb-2">SKU / Barcode</td>
+                            <td class="text-end pb-2">
+                                <asp:Label ID="lblSKU" runat="server" CssClass="fw-bold text-dark" Text="-"></asp:Label>
+                            </td>
+                        </tr>
+                        <tr>
+                            <td class="text-muted pb-2">Category</td>
+                            <td class="text-end pb-2">
+                                <asp:Label ID="lblCategory" runat="server" CssClass="fw-bold text-dark" Text="-"></asp:Label>
+                            </td>
+                        </tr>
+                        <tr>
+                            <td class="text-muted pb-2">Current Stock</td>
+                            <td class="text-end pb-2">
+                                <asp:Label ID="lblCurrentStock" runat="server" CssClass="fw-bold text-primary" Text="0 units"></asp:Label>
+                            </td>
+                        </tr>
+                        <tr>
+                            <td class="text-muted">Minimum Qty</td>
+                            <td class="text-end">
+                                <asp:Label ID="lblMinQty" runat="server" CssClass="fw-bold text-dark" Text="0 units"></asp:Label>
+                            </td>
+                        </tr>
+                    </table>
+                </div>
+
+                <div class="row g-3 mb-3">
+                    <div class="col-md-5">
+                        <label class="form-label text-muted small fw-bold text-uppercase">Quantity To Remove</label>
+                        <asp:TextBox ID="txtQuantity" runat="server" CssClass="form-control fw-bold" TextMode="Number" AutoPostBack="true" OnTextChanged="txtQuantity_TextChanged"></asp:TextBox>
+                    </div>
+                    <div class="col-md-7">
+                        <label class="form-label text-muted small fw-bold text-uppercase">Reference No.</label>
+                        <asp:TextBox ID="txtReference" runat="server" CssClass="form-control" placeholder="e.g. SO-2026-0099"></asp:TextBox>
+                    </div>
+                </div>
+
+                <div class="mb-4">
+                    <label class="form-label text-muted small fw-bold text-uppercase">Notes / Reason (Optional)</label>
+                    <asp:TextBox ID="txtNotes" runat="server" CssClass="form-control" TextMode="MultiLine" Rows="3" placeholder="Dispatched to site, damaged goods..."></asp:TextBox>
+                </div>
+
+                <div class="bg-light rounded-3 p-3 mb-4 border">
+                    <div class="d-flex justify-content-between mb-2 small">
+                        <span class="text-muted">Current stock</span>
+                        <asp:Label ID="lblSummaryCurrent" runat="server" CssClass="fw-bold text-dark" Text="0"></asp:Label>
+                    </div>
+                    <div class="d-flex justify-content-between mb-2 small pb-2 border-bottom">
+                        <span class="text-muted">Removing</span>
+                        <asp:Label ID="lblSummaryRemoving" runat="server" CssClass="fw-bold text-danger" Text="- 0"></asp:Label>
+                    </div>
+                    <div class="d-flex justify-content-between mt-2">
+                        <span class="text-muted small">New balance</span>
+                        <asp:Label ID="lblSummaryNew" runat="server" CssClass="fw-bold text-dark" Text="= 0 units"></asp:Label>
+                    </div>
+                </div>
+
+                <div class="d-flex gap-3">
+                    <asp:Button ID="btnClear" runat="server" Text="Clear" CssClass="btn btn-outline-secondary w-50 py-2 rounded-3 fw-bold" OnClick="btnClear_Click" />
+                    <asp:LinkButton ID="btnConfirm" runat="server" CssClass="btn btn-danger w-50 py-2 rounded-3 fw-bold d-flex align-items-center justify-content-center gap-2" OnClick="btnConfirm_Click">
+                        <i class="bi bi-box-arrow-up"></i> Confirm Stock Out
+                    </asp:LinkButton>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-lg-5">
+            <div class="card border border-light shadow-sm p-4 rounded-3 h-100 bg-white">
+                
+                <div class="d-flex align-items-center mb-4 pb-3 border-bottom">
+                    <div class="bg-danger bg-opacity-10 text-danger p-2 rounded-3 me-3">
+                        <i class="bi bi-clock-history fs-5"></i>
+                    </div>
+                    <div>
+                        <h6 class="mb-0 fw-bold">Today's Stock Out</h6>
+                        <asp:Label ID="lblTransactionCount" runat="server" CssClass="text-muted small" Text="0 transactions so far"></asp:Label>
+                    </div>
+                </div>
+
+                <div class="d-flex flex-column gap-3">
+                    <asp:ListView ID="rptRecentTransactions" runat="server">
+                        <LayoutTemplate>
+                            <asp:PlaceHolder ID="itemPlaceholder" runat="server" />
+                        </LayoutTemplate>
+
+                        <ItemTemplate>
+                            <div class="d-flex justify-content-between align-items-center border-bottom pb-3 mb-3">
+                                <div>
+                                    <div class="fw-bold text-dark" style="font-size: 0.9rem;"><%# Eval("ProductName") %></div>
+                                    <div class="text-muted" style="font-size: 0.75rem;"><%# Eval("ReferenceNo") %></div>
+                                </div>
+                                <div class="text-end">
+                                    <div class="fw-bold text-danger small">-<%# Eval("Quantity") %></div>
+                                    <div class="text-muted" style="font-size: 0.75rem;"><%# Eval("TransactionTime", "{0:HH:mm}") %></div>
+                                </div>
+                            </div>
+                        </ItemTemplate>
+
+                        <EmptyDataTemplate>
+                            <div class="text-center text-muted p-4">
+                                <i class="bi bi-inbox fs-3 d-block mb-2" style="color: #dee2e6;"></i>
+                                No stock out transactions recorded today.
+                            </div>
+                        </EmptyDataTemplate>
+                    </asp:ListView>
+                </div>
+
+            </div>
+        </div>
+
+    </div>
+
 </asp:Content>
