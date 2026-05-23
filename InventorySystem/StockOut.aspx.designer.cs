@@ -42,6 +42,33 @@ namespace InventorySystem
         protected global::System.Web.UI.WebControls.Label lblError;
 
         /// <summary>
+        /// pnlSuccess control.
+        /// </summary>
+        /// <remarks>
+        /// Auto-generated field.
+        /// To modify move field declaration from designer file to code-behind file.
+        /// </remarks>
+        protected global::System.Web.UI.WebControls.Panel pnlSuccess;
+
+        /// <summary>
+        /// lblSuccess control.
+        /// </summary>
+        /// <remarks>
+        /// Auto-generated field.
+        /// To modify move field declaration from designer file to code-behind file.
+        /// </remarks>
+        protected global::System.Web.UI.WebControls.Label lblSuccess;
+
+        /// <summary>
+        /// txtBarcode control.
+        /// </summary>
+        /// <remarks>
+        /// Auto-generated field.
+        /// To modify move field declaration from designer file to code-behind file.
+        /// </remarks>
+        protected global::System.Web.UI.WebControls.TextBox txtBarcode;
+
+        /// <summary>
         /// ddlProduct control.
         /// </summary>
         /// <remarks>
@@ -87,15 +114,6 @@ namespace InventorySystem
         protected global::System.Web.UI.WebControls.Label lblCurrentStock;
 
         /// <summary>
-        /// lblMinQty control.
-        /// </summary>
-        /// <remarks>
-        /// Auto-generated field.
-        /// To modify move field declaration from designer file to code-behind file.
-        /// </remarks>
-        protected global::System.Web.UI.WebControls.Label lblMinQty;
-
-        /// <summary>
         /// txtQuantity control.
         /// </summary>
         /// <remarks>
@@ -112,15 +130,6 @@ namespace InventorySystem
         /// To modify move field declaration from designer file to code-behind file.
         /// </remarks>
         protected global::System.Web.UI.WebControls.TextBox txtReference;
-
-        /// <summary>
-        /// txtNotes control.
-        /// </summary>
-        /// <remarks>
-        /// Auto-generated field.
-        /// To modify move field declaration from designer file to code-behind file.
-        /// </remarks>
-        protected global::System.Web.UI.WebControls.TextBox txtNotes;
 
         /// <summary>
         /// lblSummaryCurrent control.

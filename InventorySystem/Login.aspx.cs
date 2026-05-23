@@ -1,9 +1,8 @@
 ﻿using System;
 using System.Data;
-using System.Linq;
 using System.Web.UI;
+using System.Web.UI.WebControls;
 using Dapper;
-using BCrypt.Net;
 
 namespace InventorySystem
 {
@@ -13,87 +12,139 @@ namespace InventorySystem
         {
             if (!IsPostBack)
             {
-                // Clear session on load to ensure user is fully logged out
                 Session.Clear();
+                Session.Abandon();
+
+                LoadRoles();
+                LoadDynamicStats(); // <-- Fetches the real numbers for the bottom left
             }
         }
 
-        protected void btnLogin_Click(object sender, EventArgs e)
+        private void LoadDynamicStats()
         {
-            // 1. Grab inputs from the UI
-            int roleId = int.Parse(ddlRole.SelectedValue);
-            string username = txtUsername.Text.Trim();
-            string password = txtPassword.Text.Trim();
-
-            if (string.IsNullOrEmpty(username) || string.IsNullOrEmpty(password))
-            {
-                lblMessage.Text = "Please enter both username and password.";
-                return;
-            }
-
             try
             {
-                // 2. Open SQL Connection using our DBHelper
-                using (IDbConnection db = DBHelper.GetConnection())
+                using (var db = DBHelper.GetConnection())
                 {
-                    // 3. Query the database for the user using Dapper
-                    string query = "SELECT * FROM tblUsers WHERE Username = @Username AND RoleID = @RoleID AND Status = 'Active'";
-                    var user = db.QueryFirstOrDefault(query, new { Username = username, RoleID = roleId });
+                    // Count how many roles actually exist in the database
+                    int roleCount = db.ExecuteScalar<int>("SELECT COUNT(*) FROM tblRoles");
+                    lblRoleCount.Text = roleCount.ToString();
+                }
+            }
+            catch
+            {
+                lblRoleCount.Text = "0"; // Fallback if DB is unreachable
+            }
+        }
 
-                    if (user != null)
+        private void LoadRoles()
+        {
+            try
+            {
+                using (var db = DBHelper.GetConnection())
+                {
+                    string sql = "SELECT RoleID, RoleName FROM tblRoles ORDER BY RoleID";
+                    using (var reader = db.ExecuteReader(sql))
                     {
-                        // --- BOOTSTRAP TRICK: Fix the placeholder hash from our SQL script ---
-                        if (user.PasswordHash == "HASH_PLACEHOLDER")
-                        {
-                            string newHash = BCrypt.Net.BCrypt.HashPassword(password);
-                            db.Execute("UPDATE tblUsers SET PasswordHash = @Hash WHERE UserID = @Id", new { Hash = newHash, Id = user.UserID });
-                            user.PasswordHash = newHash; // Update local variable so login succeeds
-                        }
-                        // ----------------------------------------------------------------------
+                        DataTable dt = new DataTable();
+                        dt.Load(reader);
 
-                        // 4. Verify the password using BCrypt
-                        bool isPasswordValid = BCrypt.Net.BCrypt.Verify(password, user.PasswordHash);
-
-                        if (isPasswordValid)
-                        {
-                            // 5. Success! Set Session variables
-                            Session["UserID"] = user.UserID;
-                            Session["Username"] = user.Username;
-                            Session["FullName"] = user.FullName;
-                            Session["RoleID"] = user.RoleID;
-
-                            // 6. Route users based on their RoleID from the MVP document
-                            int currentRole = Convert.ToInt32(user.RoleID);
-
-                            if (currentRole == 1 || currentRole == 3)
-                            {
-                                // Administrator (1) and Management (3) go to the Dashboard
-                                Response.Redirect("~/Dashboard.aspx", false);
-                            }
-                            else if (currentRole == 2)
-                            {
-                                // Warehouse Staff (2) bypass the dashboard to Inventory Operations
-                                Response.Redirect("~/StockIn.aspx", false);
-                            }
-
-                            Context.ApplicationInstance.CompleteRequest();
-                        }
-                        else
-                        {
-                            lblMessage.Text = "Invalid password.";
-                        }
-                    }
-                    else
-                    {
-                        lblMessage.Text = "Invalid username or role selection.";
+                        ddlRole.DataSource = dt;
+                        ddlRole.DataTextField = "RoleName";
+                        ddlRole.DataValueField = "RoleID";
+                        ddlRole.DataBind();
                     }
                 }
             }
             catch (Exception ex)
             {
-                // In a real app we'd log this, but for now we just show it
-                lblMessage.Text = "Database Error: " + ex.Message;
+                ShowError("Database connection failed. Is SQL Server running?");
             }
+        }
+
+        protected void btnLogin_Click(object sender, EventArgs e)
+        {
+            pnlError.Visible = false;
+
+            string username = txtUsername.Text.Trim();
+            string password = txtPassword.Text;
+            int selectedRoleID = Convert.ToInt32(ddlRole.SelectedValue);
+
+            if (string.IsNullOrEmpty(username) || string.IsNullOrEmpty(password))
+            {
+                ShowError("Please enter both username and password.");
+                return;
+            }
+
+            try
+            {
+                using (var db = DBHelper.GetConnection())
+                {
+                    string sql = @"
+                        SELECT u.UserID, u.FullName, u.Username, u.PasswordHash, u.RoleID, u.Status, r.RoleName
+                        FROM tblUsers u
+                        INNER JOIN tblRoles r ON u.RoleID = r.RoleID
+                        WHERE u.Username = @Username";
+
+                    var user = db.QueryFirstOrDefault(sql, new { Username = username });
+
+                    if (user == null)
+                    {
+                        ShowError("Invalid username or password.");
+                        return;
+                    }
+
+                    if (user.Status != "Active")
+                    {
+                        ShowError("This account has been deactivated. Please contact an administrator.");
+                        return;
+                    }
+
+                    if (user.RoleID != selectedRoleID)
+                    {
+                        ShowError($"The user '{username}' is not assigned to the selected role.");
+                        return;
+                    }
+
+                    bool isPasswordValid = BCrypt.Net.BCrypt.Verify(password, user.PasswordHash);
+
+                    if (!isPasswordValid)
+                    {
+                        ShowError("Invalid username or password.");
+                        return;
+                    }
+
+                    Session["UserID"] = user.UserID;
+                    Session["Username"] = user.Username;
+                    Session["FullName"] = user.FullName;
+                    Session["RoleName"] = user.RoleName;
+
+                    db.Execute("INSERT INTO tblSystemLogs (UserID, Action, LogDate) VALUES (@UID, 'User logged into the system', GETDATE())",
+                        new { UID = user.UserID });
+
+                    // Role-Based Routing
+                    if (user.RoleName == "Administrator" || user.RoleName == "Management User")
+                    {
+                        Response.Redirect("Dashboard.aspx", false);
+                    }
+                    else if (user.RoleName == "Warehouse Staff")
+                    {
+                        Response.Redirect("ProductList.aspx", false);
+                    }
+
+                    Context.ApplicationInstance.CompleteRequest();
+                }
+            }
+            catch (Exception ex)
+            {
+                ShowError("System error during login: " + ex.Message);
+            }
+        }
+
+        private void ShowError(string message)
+        {
+            pnlError.Visible = true;
+            lblError.Text = message;
         }
     }
 }

@@ -11,7 +11,7 @@ namespace InventorySystem
 {
 
 
-    public partial class ProductCreate
+    public partial class ProductEdit
     {
 
         /// <summary>
@@ -40,6 +40,24 @@ namespace InventorySystem
         /// To modify move field declaration from designer file to code-behind file.
         /// </remarks>
         protected global::System.Web.UI.WebControls.Label lblMessage;
+
+        /// <summary>
+        /// pnlSuccess control.
+        /// </summary>
+        /// <remarks>
+        /// Auto-generated field.
+        /// To modify move field declaration from designer file to code-behind file.
+        /// </remarks>
+        protected global::System.Web.UI.WebControls.Panel pnlSuccess;
+
+        /// <summary>
+        /// hfProductID control.
+        /// </summary>
+        /// <remarks>
+        /// Auto-generated field.
+        /// To modify move field declaration from designer file to code-behind file.
+        /// </remarks>
+        protected global::System.Web.UI.WebControls.HiddenField hfProductID;
 
         /// <summary>
         /// txtProductName control.
@@ -123,12 +141,12 @@ namespace InventorySystem
         protected global::System.Web.UI.WebControls.LinkButton btnCancel;
 
         /// <summary>
-        /// btnSave control.
+        /// btnUpdate control.
         /// </summary>
         /// <remarks>
         /// Auto-generated field.
         /// To modify move field declaration from designer file to code-behind file.
         /// </remarks>
-        protected global::System.Web.UI.WebControls.LinkButton btnSave;
+        protected global::System.Web.UI.WebControls.LinkButton btnUpdate;
     }
 }
