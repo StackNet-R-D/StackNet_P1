@@ -1,150 +1,201 @@
 ﻿<%@ Page Title="Dashboard" Language="C#" MasterPageFile="~/Site.Master" AutoEventWireup="true" CodeBehind="Dashboard.aspx.cs" Inherits="InventorySystem.Dashboard" %>
 
 <asp:Content ID="Content1" ContentPlaceHolderID="head" runat="server">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 </asp:Content>
 
 <asp:Content ID="Content2" ContentPlaceHolderID="MainContent" runat="server">
-    
-    <div class="d-flex justify-content-between align-items-center mb-4 pb-2 border-bottom">
-        <h4 class="fw-normal mb-0">Dashboard Overview</h4>
-        <div class="d-flex align-items-center text-muted small fw-bold text-uppercase">
-            <span class="me-3">FRI 22 MAY 2026 • 09:41</span>
-            <span class="badge bg-danger bg-opacity-10 text-danger border border-danger p-2 rounded-pill">
-                <i class="bi bi-exclamation-triangle"></i> 4 Low Stock
-            </span>
+    <div class="container-fluid mt-4 px-4">
+        
+        <%-- Header --%>
+        <div class="d-flex justify-content-between align-items-center mb-4 pb-2 border-bottom">
+            <h4 class="fw-normal mb-0 text-dark">Dashboard Overview</h4>
+            <div class="d-flex align-items-center gap-3">
+                <span class="text-muted small fw-bold text-uppercase"><%= DateTime.Now.ToString("ddd dd MMM yyyy • HH:mm") %></span>
+                <asp:Panel ID="pnlTopLowStockAlert" runat="server" CssClass="badge bg-danger bg-opacity-10 text-danger border border-danger border-opacity-25 px-3 py-2 d-flex align-items-center gap-2">
+                    <i class="bi bi-exclamation-triangle-fill"></i>
+                    <asp:Label ID="lblTopLowStockCount" runat="server" Text="0"></asp:Label> Low Stock
+                </asp:Panel>
+            </div>
         </div>
-    </div>
 
-    <div class="row g-3 mb-4">
-        <div class="col-md-3">
-            <div class="card border border-light shadow-sm p-3 h-100 rounded-3">
-                <div class="text-muted small text-uppercase fw-bold mb-2">Total Products</div>
-                <h2 class="fw-bold mb-1">247</h2>
-                <div class="text-success small fw-bold"><i class="bi bi-arrow-up"></i> 12 this month</div>
-            </div>
-        </div>
-        <div class="col-md-3">
-            <div class="card border border-light shadow-sm p-3 h-100 rounded-3">
-                <div class="text-muted small text-uppercase fw-bold mb-2">Stock In Today</div>
-                <h2 class="fw-bold mb-1">1,840</h2>
-                <div class="text-muted small">units received</div>
-            </div>
-        </div>
-        <div class="col-md-3">
-            <div class="card border border-light shadow-sm p-3 h-100 rounded-3">
-                <div class="text-muted small text-uppercase fw-bold mb-2">Stock Out Today</div>
-                <h2 class="fw-bold mb-1">963</h2>
-                <div class="text-danger small fw-bold"><i class="bi bi-arrow-down"></i> 18% vs yesterday</div>
-            </div>
-        </div>
-        <div class="col-md-3">
-            <div class="card border border-light shadow-sm p-3 h-100 rounded-3">
-                <div class="text-muted small text-uppercase fw-bold mb-2">Low Stock Alerts</div>
-                <h2 class="fw-bold text-danger mb-1">4</h2>
-                <div class="text-danger small">requires attention</div>
-            </div>
-        </div>
-    </div>
-
-    <div class="row g-3 mb-4">
-        <div class="col-md-8">
-            <div class="card border border-light shadow-sm p-4 h-100 rounded-3">
-                <div class="d-flex justify-content-between mb-4">
-                    <span class="text-muted small text-uppercase fw-bold">Weekly Stock Movement</span>
-                    <span class="text-muted small text-uppercase fw-bold">Units</span>
+        <%-- Row 1: KPI Cards --%>
+        <div class="row g-4 mb-4">
+            <div class="col-md-3">
+                <div class="card border border-light shadow-sm p-3 rounded-3 h-100 bg-white">
+                    <div class="text-muted small fw-bold text-uppercase mb-2">Total Products</div>
+                    <h2 class="fw-bold text-dark mb-1"><asp:Label ID="lblTotalProducts" runat="server" Text="0"></asp:Label></h2>
+                    <div class="text-success small fw-semibold"><i class="bi bi-arrow-up-short"></i> Active items</div>
                 </div>
-                
-                <div class="flex-grow-1 d-flex flex-column justify-content-end" style="min-height: 200px;">
-                    <div class="d-flex text-muted small text-uppercase" style="font-size: 0.7rem;">
-                        <div class="flex-fill">Mon</div>
-                        <div class="flex-fill">Tue</div>
-                        <div class="flex-fill">Wed</div>
-                        <div class="flex-fill">Thu</div>
-                        <div class="flex-fill">Fri</div>
+            </div>
+            <div class="col-md-3">
+                <div class="card border border-light shadow-sm p-3 rounded-3 h-100 bg-white">
+                    <div class="text-muted small fw-bold text-uppercase mb-2">Stock In Today</div>
+                    <h2 class="fw-bold text-dark mb-1"><asp:Label ID="lblStockInToday" runat="server" Text="0"></asp:Label></h2>
+                    <div class="text-muted small">units received</div>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="card border border-light shadow-sm p-3 rounded-3 h-100 bg-white">
+                    <div class="text-muted small fw-bold text-uppercase mb-2">Stock Out Today</div>
+                    <h2 class="fw-bold text-dark mb-1"><asp:Label ID="lblStockOutToday" runat="server" Text="0"></asp:Label></h2>
+                    <div class="text-muted small">units dispatched</div>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="card border border-light shadow-sm p-3 rounded-3 h-100 bg-white">
+                    <div class="text-muted small fw-bold text-uppercase mb-2">Low Stock Alerts</div>
+                    <h2 class="fw-bold text-danger mb-1"><asp:Label ID="lblLowStockAlerts" runat="server" Text="0"></asp:Label></h2>
+                    <div class="text-danger small">requires attention</div>
+                </div>
+            </div>
+        </div>
+
+        <%-- Row 2: Chart & Low Stock List --%>
+        <div class="row g-4 mb-4">
+            <div class="col-lg-8">
+                <div class="card border border-light shadow-sm p-4 rounded-3 h-100 bg-white">
+                    <div class="d-flex justify-content-between align-items-center mb-4">
+                        <div class="text-muted small fw-bold text-uppercase">Weekly Stock Movement</div>
+                        <div class="text-muted small fw-bold text-uppercase">Units</div>
+                    </div>
+                    <asp:HiddenField ID="hfChartLabels" runat="server" />
+                    <asp:HiddenField ID="hfChartDataIn" runat="server" />
+                    <asp:HiddenField ID="hfChartDataOut" runat="server" />
+                    <div style="height: 300px;">
+                        <canvas id="movementChart"></canvas>
                     </div>
                 </div>
+            </div>
 
-                <div class="d-flex mt-3 small fw-bold">
-                    <div class="me-4"><i class="bi bi-square-fill text-primary me-1"></i> Stock In</div>
-                    <div><i class="bi bi-square-fill text-warning me-1"></i> Stock Out</div>
+            <div class="col-lg-4">
+                <div class="card border border-light shadow-sm p-4 rounded-3 h-100 bg-white">
+                    <%-- ADDED: View All Link to Low Stock Report --%>
+                    <div class="d-flex justify-content-between align-items-center mb-4">
+                        <div class="text-muted small fw-bold text-uppercase">Low Stock Alerts</div>
+                        <a href="LowStockReport.aspx" class="btn btn-sm btn-light text-danger fw-bold border py-0 px-2 rounded-2" style="font-size: 0.75rem;">View All</a>
+                    </div>
+                    
+                    <div class="d-flex flex-column gap-2">
+                        <asp:ListView ID="rptLowStockList" runat="server">
+                            <ItemTemplate>
+                                <div class="p-3 rounded-3 mb-2" style="background-color: #fff8f8; border-left: 4px solid #dc3545;">
+                                    <div class="d-flex justify-content-between align-items-start">
+                                        <div>
+                                            <div class="fw-bold text-dark" style="font-size: 0.9rem;"><%# Eval("ProductName") %></div>
+                                            <div class="text-muted" style="font-size: 0.75rem;"><%# Eval("CategoryName") %> • Min: <%# Eval("MinimumQty") %></div>
+                                        </div>
+                                        <div class="text-end">
+                                            <div class="fw-bold text-danger"><%# Eval("CurrentQty") %> <span class="text-muted fw-normal">/</span></div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </ItemTemplate>
+                            <EmptyDataTemplate>
+                                <div class="text-center text-muted p-4">
+                                    <i class="bi bi-check-circle fs-3 text-success d-block mb-2"></i>
+                                    All stock levels look good!
+                                </div>
+                            </EmptyDataTemplate>
+                        </asp:ListView>
+                    </div>
                 </div>
             </div>
         </div>
 
-        <div class="col-md-4">
-            <div class="card border border-light shadow-sm p-4 h-100 rounded-3">
-                <span class="text-muted small text-uppercase fw-bold mb-3">Low Stock Alerts</span>
-                
-                <div class="border-start border-danger border-3 p-2 mb-2 bg-white shadow-sm rounded d-flex justify-content-between align-items-center">
-                    <div><div class="fw-bold small text-dark">M8 Hex</div><div class="small text-muted" style="font-size: 0.75rem;">Bolts 50mm</div></div>
-                    <div class="text-end"><div class="fw-bold text-danger small">2 /</div><div class="text-muted" style="font-size: 0.7rem;">min 10</div></div>
-                </div>
+        <%-- Row 3: Recent Transactions --%>
+        <div class="card border border-light shadow-sm p-4 rounded-3 mb-4 bg-white">
+            <%-- ADDED: View All Link to Stock Movement Report --%>
+            <div class="d-flex justify-content-between align-items-center mb-4">
+                <div class="text-muted small fw-bold text-uppercase">Recent Transactions</div>
+                <a href="StockMovementReport.aspx" class="btn btn-sm btn-light text-primary fw-bold border py-0 px-2 rounded-2" style="font-size: 0.75rem;">View All</a>
+            </div>
 
-                <div class="border-start border-danger border-3 p-2 mb-2 bg-white shadow-sm rounded d-flex justify-content-between align-items-center">
-                    <div><div class="fw-bold small text-dark">PVC Pipe</div><div class="small text-muted" style="font-size: 0.75rem;">1/2"</div></div>
-                    <div class="text-end"><div class="fw-bold text-danger small">5 /</div><div class="text-muted" style="font-size: 0.7rem;">min 20</div></div>
-                </div>
+            <div class="table-responsive">
+                <asp:GridView ID="gvRecentTransactions" runat="server" AutoGenerateColumns="False" 
+                    CssClass="table table-borderless align-middle mb-0" 
+                    GridLines="None" ShowHeaderWhenEmpty="True">
+                    
+                    <HeaderStyle CssClass="text-muted small fw-bold text-uppercase border-bottom" BackColor="#ffffff" Height="40px" />
+                    <RowStyle Height="50px" CssClass="border-bottom border-light" />
+                    
+                    <Columns>
+                        <asp:BoundField DataField="ReferenceNo" HeaderText="Ref No" ItemStyle-CssClass="fw-semibold text-dark small" />
+                        <asp:BoundField DataField="ProductName" HeaderText="Product" ItemStyle-CssClass="fw-bold text-dark" />
+                        
+                        <asp:TemplateField HeaderText="Type">
+                            <ItemTemplate>
+                                <span class='<%# Eval("TransactionType").ToString() == "IN" ? "badge bg-success bg-opacity-10 text-success" : "badge bg-danger bg-opacity-10 text-danger" %>'>
+                                    <%# Eval("TransactionType") %>
+                                </span>
+                            </ItemTemplate>
+                        </asp:TemplateField>
 
-                <div class="border-start border-danger border-3 p-2 mb-2 bg-white shadow-sm rounded d-flex justify-content-between align-items-center">
-                    <div><div class="fw-bold small text-dark">Cable Ties</div><div class="small text-muted" style="font-size: 0.75rem;">300mm</div></div>
-                    <div class="text-end"><div class="fw-bold text-danger small">8 /</div><div class="text-muted" style="font-size: 0.7rem;">min 50</div></div>
-                </div>
+                        <asp:TemplateField HeaderText="Qty">
+                            <ItemTemplate>
+                                <span class='<%# Eval("TransactionType").ToString() == "IN" ? "text-success fw-bold" : "text-danger fw-bold" %>'>
+                                    <%# Eval("TransactionType").ToString() == "IN" ? "+" : "-" %><%# Eval("Quantity") %>
+                                </span>
+                            </ItemTemplate>
+                        </asp:TemplateField>
 
-                <div class="border-start border-danger border-3 p-2 mb-0 bg-white shadow-sm rounded d-flex justify-content-between align-items-center">
-                    <div><div class="fw-bold small text-dark">Safety</div><div class="small text-muted" style="font-size: 0.75rem;">Gloves L</div></div>
-                    <div class="text-end"><div class="fw-bold text-danger small">3 /</div><div class="text-muted" style="font-size: 0.7rem;">min 15</div></div>
-                </div>
-
+                        <asp:BoundField DataField="BalanceQty" HeaderText="Balance" ItemStyle-CssClass="text-dark fw-bold" />
+                        <asp:BoundField DataField="Username" HeaderText="By" ItemStyle-CssClass="text-muted small fw-semibold" />
+                        <asp:BoundField DataField="TransactionTime" HeaderText="Time" DataFormatString="{0:dd MMM HH:mm}" ItemStyle-CssClass="text-muted small" />
+                    </Columns>
+                    <EmptyDataTemplate>
+                        <div class="text-center text-muted p-4">No recent transactions.</div>
+                    </EmptyDataTemplate>
+                </asp:GridView>
             </div>
         </div>
+
     </div>
 
-    <div class="card border border-light shadow-sm p-4 rounded-3">
-        <span class="text-muted small text-uppercase fw-bold mb-3">Recent Transactions</span>
-        <div class="table-responsive">
-            <table class="table table-borderless table-hover align-middle mb-0" style="font-size: 0.85rem;">
-                <thead class="text-muted small text-uppercase" style="border-bottom: 2px dashed #dee2e6;">
-                    <tr>
-                        <th class="py-2">Ref No</th>
-                        <th class="py-2">Product</th>
-                        <th class="py-2">Type</th>
-                        <th class="py-2">Qty</th>
-                        <th class="py-2">Balance</th>
-                        <th class="py-2">By</th>
-                        <th class="py-2 text-end">Time</th>
-                    </tr>
-                </thead>
-                <tbody class="fw-bold text-secondary">
-                    <tr style="border-bottom: 1px dashed #dee2e6;">
-                        <td class="py-3">TXN-00891</td>
-                        <td class="text-dark">Copper Wire 2.5mm</td>
-                        <td><span class="badge bg-success bg-opacity-25 text-success px-2 py-1">IN</span></td>
-                        <td class="text-dark">+500</td>
-                        <td>1,248</td>
-                        <td>staff01</td>
-                        <td class="text-end">09:21</td>
-                    </tr>
-                    <tr style="border-bottom: 1px dashed #dee2e6;">
-                        <td class="py-3">TXN-00890</td>
-                        <td class="text-dark">M8 Hex Bolts 50mm</td>
-                        <td><span class="badge bg-danger bg-opacity-25 text-danger px-2 py-1">OUT</span></td>
-                        <td class="text-dark">-15</td>
-                        <td>2</td>
-                        <td>staff02</td>
-                        <td class="text-end">08:55</td>
-                    </tr>
-                    <tr>
-                        <td class="py-3">TXN-00889</td>
-                        <td class="text-dark">Safety Helmet Yellow</td>
-                        <td><span class="badge bg-success bg-opacity-25 text-success px-2 py-1">IN</span></td>
-                        <td class="text-dark">+30</td>
-                        <td>87</td>
-                        <td>staff01</td>
-                        <td class="text-end">08:30</td>
-                    </tr>
-                </tbody>
-            </table>
-        </div>
-    </div>
+    <script>
+        document.addEventListener("DOMContentLoaded", function () {
+            const labelsStr = document.getElementById('<%= hfChartLabels.ClientID %>').value;
+            const dataInStr = document.getElementById('<%= hfChartDataIn.ClientID %>').value;
+            const dataOutStr = document.getElementById('<%= hfChartDataOut.ClientID %>').value;
 
+            if (labelsStr) {
+                const labels = labelsStr.split(',');
+                const dataIn = dataInStr.split(',').map(Number);
+                const dataOut = dataOutStr.split(',').map(Number);
+
+                const ctx = document.getElementById('movementChart').getContext('2d');
+                new Chart(ctx, {
+                    type: 'bar',
+                    data: {
+                        labels: labels,
+                        datasets: [
+                            {
+                                label: 'Stock In',
+                                data: dataIn,
+                                backgroundColor: '#0d6efd',
+                                borderRadius: 4
+                            },
+                            {
+                                label: 'Stock Out',
+                                data: dataOut,
+                                backgroundColor: '#ffc107',
+                                borderRadius: 4
+                            }
+                        ]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        plugins: {
+                            legend: { position: 'bottom', align: 'start' }
+                        },
+                        scales: {
+                            y: { beginAtZero: true, grid: { borderDash: [2, 4], color: '#f0f0f0' } },
+                            x: { grid: { display: false } }
+                        }
+                    }
+                });
+            }
+        });
+    </script>
 </asp:Content>

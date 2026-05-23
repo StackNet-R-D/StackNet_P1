@@ -17,38 +17,40 @@
 
     <asp:Panel ID="pnlError" runat="server" Visible="false" CssClass="alert alert-danger d-flex align-items-center mb-4 border-0 shadow-sm">
         <i class="bi bi-exclamation-triangle-fill me-2 fs-5"></i>
-        <asp:Label ID="lblError" runat="server" Text=""></asp:Label>
+        <asp:Label ID="lblError" runat="server"></asp:Label>
+    </asp:Panel>
+
+    <%-- NEW: Success Panel --%>
+    <asp:Panel ID="pnlSuccess" runat="server" Visible="false" CssClass="alert alert-success d-flex align-items-center mb-4 border-0 shadow-sm">
+        <i class="bi bi-check-circle-fill me-2 fs-5"></i>
+        <asp:Label ID="lblSuccess" runat="server">Stock Out transaction completed successfully!</asp:Label>
     </asp:Panel>
 
     <div class="row g-4">
-        
         <div class="col-lg-7">
             <div class="card border border-light shadow-sm p-4 rounded-3 h-100 bg-white">
                 
-                <div class="d-flex align-items-center mb-4">
+                <div class="mb-4 p-3 rounded-3" style="background-color: #fff8e1; border: 1px solid #ffc107;">
+                    <label class="form-label fw-bold text-dark"><i class="bi bi-upc-scan me-2"></i>Barcode Scanner</label>
+                    <asp:TextBox ID="txtBarcode" runat="server" CssClass="form-control form-control-lg border-warning border-opacity-50" 
+                        placeholder="Click here and scan barcode..." AutoPostBack="true" OnTextChanged="txtBarcode_TextChanged"></asp:TextBox>
+                    <div class="form-text mt-1">Cursor must be in this field to scan. Automatically selects the product below.</div>
+                </div>
+
+                <div class="d-flex align-items-center mb-3">
                     <div class="bg-warning bg-opacity-10 text-warning p-2 rounded-3 me-3">
-                        <i class="bi bi-box-arrow-up fs-5"></i>
+                        <i class="bi bi-list-ul fs-5"></i>
                     </div>
                     <div>
                         <h6 class="mb-0 fw-bold">Manual Product Selection</h6>
-                        <small class="text-muted">Choose an item to dispatch</small>
+                        <small class="text-muted">Or manually choose an item from the list</small>
                     </div>
                 </div>
 
-                <div class="rounded-3 p-3 mb-4 bg-warning bg-opacity-10 d-flex align-items-center justify-content-between" style="border: 2px dashed #ffc107;">
-                    <div class="d-flex align-items-center">
-                        <div class="bg-warning text-dark p-2 rounded-3 me-3">
-                            <i class="bi bi-box-seam fs-5"></i>
-                        </div>
-                        <div>
-                            <div class="fw-bold small text-dark">Select Product</div>
-                            <div class="text-muted" style="font-size: 0.75rem;">Manually choose an item</div>
-                        </div>
-                    </div>
-                    <div style="width: 250px;">
-                        <asp:DropDownList ID="ddlProduct" runat="server" CssClass="form-select fw-bold border-0 shadow-sm" AutoPostBack="true" OnSelectedIndexChanged="ddlProduct_SelectedIndexChanged">
-                        </asp:DropDownList>
-                    </div>
+                <div class="mb-4">
+                    <asp:DropDownList ID="ddlProduct" runat="server" CssClass="form-select form-select-lg border-secondary border-opacity-25 shadow-sm" 
+                        AutoPostBack="true" OnSelectedIndexChanged="ddlProduct_SelectedIndexChanged">
+                    </asp:DropDownList>
                 </div>
 
                 <div class="bg-light rounded-3 p-3 mb-4 border">
@@ -78,12 +80,6 @@
                                 <asp:Label ID="lblCurrentStock" runat="server" CssClass="fw-bold text-primary" Text="0 units"></asp:Label>
                             </td>
                         </tr>
-                        <tr>
-                            <td class="text-muted">Minimum Qty</td>
-                            <td class="text-end">
-                                <asp:Label ID="lblMinQty" runat="server" CssClass="fw-bold text-dark" Text="0 units"></asp:Label>
-                            </td>
-                        </tr>
                     </table>
                 </div>
 
@@ -96,11 +92,6 @@
                         <label class="form-label text-muted small fw-bold text-uppercase">Reference No.</label>
                         <asp:TextBox ID="txtReference" runat="server" CssClass="form-control" placeholder="e.g. SO-2026-0099"></asp:TextBox>
                     </div>
-                </div>
-
-                <div class="mb-4">
-                    <label class="form-label text-muted small fw-bold text-uppercase">Notes / Reason (Optional)</label>
-                    <asp:TextBox ID="txtNotes" runat="server" CssClass="form-control" TextMode="MultiLine" Rows="3" placeholder="Dispatched to site, damaged goods..."></asp:TextBox>
                 </div>
 
                 <div class="bg-light rounded-3 p-3 mb-4 border">
@@ -142,10 +133,6 @@
 
                 <div class="d-flex flex-column gap-3">
                     <asp:ListView ID="rptRecentTransactions" runat="server">
-                        <LayoutTemplate>
-                            <asp:PlaceHolder ID="itemPlaceholder" runat="server" />
-                        </LayoutTemplate>
-
                         <ItemTemplate>
                             <div class="d-flex justify-content-between align-items-center border-bottom pb-3 mb-3">
                                 <div>
@@ -158,7 +145,6 @@
                                 </div>
                             </div>
                         </ItemTemplate>
-
                         <EmptyDataTemplate>
                             <div class="text-center text-muted p-4">
                                 <i class="bi bi-inbox fs-3 d-block mb-2" style="color: #dee2e6;"></i>
