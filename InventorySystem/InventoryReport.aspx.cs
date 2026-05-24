@@ -19,7 +19,6 @@ namespace InventorySystem
         {
             using (var db = DBHelper.GetConnection())
             {
-                // SQL query calculates the math directly in the database for maximum performance
                 string sql = @"
                     SELECT 
                         c.CategoryName, 
@@ -44,16 +43,20 @@ namespace InventorySystem
                     gvInventoryReport.DataSource = dt;
                     gvInventoryReport.DataBind();
 
-                    // Calculate the summary totals for the KPI cards
                     int totalItems = 0;
                     decimal totalCost = 0;
                     decimal totalRetail = 0;
 
                     foreach (DataRow row in dt.Rows)
                     {
-                        totalItems += Convert.ToInt32(row["CurrentQty"]);
-                        totalCost += Convert.ToDecimal(row["TotalCostValue"]);
-                        totalRetail += Convert.ToDecimal(row["TotalRetailValue"]);
+                        if (row["CurrentQty"] != DBNull.Value)
+                            totalItems += Convert.ToInt32(row["CurrentQty"]);
+
+                        if (row["TotalCostValue"] != DBNull.Value)
+                            totalCost += Convert.ToDecimal(row["TotalCostValue"]);
+
+                        if (row["TotalRetailValue"] != DBNull.Value)
+                            totalRetail += Convert.ToDecimal(row["TotalRetailValue"]);
                     }
 
                     lblTotalItems.Text = totalItems.ToString("N0");

@@ -217,6 +217,7 @@
     <Content Include="StockIn.aspx" />
     <Content Include="StockMovementReport.aspx" />
     <Content Include="StockOut.aspx" />
+    <Content Include="TransactionHistory.aspx" />
     <Content Include="UserCreate.aspx" />
     <Content Include="UserEdit.aspx" />
     <Content Include="UserList.aspx" />
@@ -364,6 +365,13 @@
     </Compile>
     <Compile Include="StockOut.aspx.designer.cs">
       <DependentUpon>StockOut.aspx</DependentUpon>
+    </Compile>
+    <Compile Include="TransactionHistory.aspx.cs">
+      <DependentUpon>TransactionHistory.aspx</DependentUpon>
+      <SubType>ASPXCodeBehind</SubType>
+    </Compile>
+    <Compile Include="TransactionHistory.aspx.designer.cs">
+      <DependentUpon>TransactionHistory.aspx</DependentUpon>
     </Compile>
     <Compile Include="UserCreate.aspx.cs">
       <DependentUpon>UserCreate.aspx</DependentUpon>
