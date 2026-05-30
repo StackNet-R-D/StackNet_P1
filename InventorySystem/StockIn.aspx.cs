@@ -1,8 +1,5 @@
 ﻿using System;
-using System.Data;
-using System.Linq;
 using System.Web.UI;
-using System.Web.UI.WebControls;
 using Dapper;
 
 namespace InventorySystem
@@ -13,203 +10,102 @@ namespace InventorySystem
         {
             if (!IsPostBack)
             {
-                // NEW: Check if redirected here after a successful transaction
-                if (Request.QueryString["success"] == "true")
-                {
-                    pnlSuccess.Visible = true;
-                }
-
-                txtBarcode.Focus();
-                GenerateReferenceNumber();
-                LoadRecentTransactions();
-                LoadProductsDropdown();
-            }
-        }
-
-        private void LoadProductsDropdown()
-        {
-            using (var db = DBHelper.GetConnection())
-            {
-                using (var reader = db.ExecuteReader("SELECT ProductID, ProductName FROM tblProducts WHERE Status = 'Active' ORDER BY ProductName"))
-                {
-                    DataTable dt = new DataTable();
-                    dt.Load(reader);
-
-                    ddlProduct.DataSource = dt;
-                    ddlProduct.DataTextField = "ProductName";
-                    ddlProduct.DataValueField = "ProductID";
-                    ddlProduct.DataBind();
-
-                    ddlProduct.Items.Insert(0, new ListItem("-- Select a Product --", "0"));
-                }
+                txtReference.Text = "SI-" + DateTime.Now.ToString("yyyyMMddHHmmss");
             }
         }
 
         protected void txtBarcode_TextChanged(object sender, EventArgs e)
         {
-            pnlError.Visible = false;
-            pnlSuccess.Visible = false;
+            pnlMessage.Visible = false;
             string barcode = txtBarcode.Text.Trim();
+
             if (string.IsNullOrEmpty(barcode)) return;
 
             using (var db = DBHelper.GetConnection())
             {
-                int? productID = db.QueryFirstOrDefault<int?>("SELECT ProductID FROM tblProducts WHERE Barcode = @Barcode", new { Barcode = barcode });
-
-                if (productID != null)
+                var product = db.QueryFirstOrDefault("SELECT * FROM tblProducts WHERE Barcode = @Barcode AND Status = 'Active'", new { Barcode = barcode });
+                if (product != null)
                 {
-                    ddlProduct.SelectedValue = productID.ToString();
-                    LoadProductDetails(productID.Value);
-                    txtQuantity.Focus();
+                    pnlProductContext.Visible = true;
+                    phNoProduct.Visible = false;
+
+                    lblContextName.Text = product.ProductName;
+                    lblContextCurrentQty.Text = Convert.ToInt32(product.CurrentQty).ToString("N0") + " units";
+                    lblContextCost.Text = "Rs. " + Convert.ToDecimal(product.CostPrice).ToString("N2");
+                    lblContextRetail.Text = "Rs. " + Convert.ToDecimal(product.SellingPrice).ToString("N2");
+
+                    txtQty.Focus();
                 }
                 else
                 {
-                    pnlError.Visible = true;
-                    lblError.Text = "Barcode not found in the system.";
-                    ClearProductDetails();
+                    ResetContext();
+                    ShowAlert("Product not found or is currently marked inactive.", "alert-danger");
                 }
-                txtBarcode.Text = "";
-            }
-        }
-
-        protected void ddlProduct_SelectedIndexChanged(object sender, EventArgs e)
-        {
-            pnlError.Visible = false;
-            pnlSuccess.Visible = false;
-            int selectedID = Convert.ToInt32(ddlProduct.SelectedValue);
-
-            if (selectedID == 0)
-                ClearProductDetails();
-            else
-                LoadProductDetails(selectedID);
-        }
-
-        private void LoadProductDetails(int productID)
-        {
-            using (var db = DBHelper.GetConnection())
-            {
-                var p = db.QueryFirstOrDefault(@"
-                    SELECT p.ProductID, p.ProductName, p.Barcode AS SKU, p.CurrentQty, c.CategoryName 
-                    FROM tblProducts p 
-                    INNER JOIN tblCategories c ON p.CategoryID = c.CategoryID 
-                    WHERE p.ProductID = @ID", new { ID = productID });
-
-                if (p != null)
-                {
-                    ViewState["CurrentProductID"] = p.ProductID;
-                    ViewState["CurrentStock"] = p.CurrentQty;
-
-                    lblProductName.Text = p.ProductName;
-                    lblSKU.Text = p.SKU;
-                    lblCategory.Text = p.CategoryName;
-                    lblCurrentStock.Text = $"{p.CurrentQty} units";
-                    lblSummaryCurrent.Text = p.CurrentQty.ToString();
-
-                    txtQuantity.Text = "";
-                    UpdateSummaryMath();
-                }
-            }
-        }
-
-        protected void txtQuantity_TextChanged(object sender, EventArgs e) => UpdateSummaryMath();
-
-        private void UpdateSummaryMath()
-        {
-            if (ViewState["CurrentStock"] != null)
-            {
-                int current = (int)ViewState["CurrentStock"];
-                int qty = 0;
-                int.TryParse(txtQuantity.Text, out qty);
-
-                lblSummaryAdding.Text = $"+ {qty}";
-                lblSummaryNew.Text = $"= {current + qty} units";
             }
         }
 
         protected void btnConfirm_Click(object sender, EventArgs e)
         {
-            pnlError.Visible = false;
-            pnlSuccess.Visible = false;
-            if (ViewState["CurrentProductID"] == null || !int.TryParse(txtQuantity.Text, out int qty) || qty <= 0)
+            pnlMessage.Visible = false;
+            string barcode = txtBarcode.Text.Trim();
+            string qtyText = txtQty.Text.Trim();
+            string reference = txtReference.Text.Trim();
+            string reason = ddlReason.SelectedValue;
+
+            if (string.IsNullOrEmpty(barcode) || string.IsNullOrEmpty(qtyText) || string.IsNullOrEmpty(reference))
             {
-                pnlError.Visible = true;
-                lblError.Text = "Please select a product and enter a valid quantity greater than 0.";
+                ShowAlert("All tracking metrics are required to execute a receiving operation.", "alert-warning");
                 return;
             }
 
-            bool isSuccess = false;
+            int qtyToAdd = Convert.ToInt32(qtyText);
+            int userId = Session["UserID"] != null ? Convert.ToInt32(Session["UserID"]) : 1;
 
             using (var db = DBHelper.GetConnection())
             {
-                using (var trans = db.BeginTransaction())
+                var product = db.QueryFirstOrDefault("SELECT * FROM tblProducts WHERE Barcode = @Barcode AND Status = 'Active'", new { Barcode = barcode });
+                if (product == null)
                 {
-                    try
-                    {
-                        db.Execute(@"
-                            INSERT INTO tblStockIn (ProductID, Quantity, ReferenceNo, CreatedBy) VALUES (@PID, @Qty, @Ref, 1);
-                            UPDATE tblProducts SET CurrentQty = CurrentQty + @Qty WHERE ProductID = @PID;
-                            INSERT INTO tblInventoryTransactions (ProductID, TransactionType, Quantity, BalanceQty, ReferenceNo, CreatedBy) 
-                            VALUES (@PID, 'IN', @Qty, (SELECT CurrentQty FROM tblProducts WHERE ProductID = @PID), @Ref, 1);",
-                        new { PID = ViewState["CurrentProductID"], Qty = qty, Ref = txtReference.Text }, trans);
-
-                        trans.Commit();
-                        isSuccess = true;
-                    }
-                    catch (Exception ex)
-                    {
-                        trans.Rollback();
-                        pnlError.Visible = true;
-                        lblError.Text = "Transaction failed: " + ex.Message;
-                    }
+                    ShowAlert("Transaction failed: Target item reference identifier invalid.", "alert-danger");
+                    return;
                 }
-            }
 
-            if (isSuccess)
-            {
-                // NEW: Append ?success=true to the URL
-                Response.Redirect("StockIn.aspx?success=true", false);
-                Context.ApplicationInstance.CompleteRequest();
+                int currentQty = Convert.ToInt32(product.CurrentQty);
+                int newBalanceQty = currentQty + qtyToAdd; // Adding stock
+
+                // 1. Execute direct stock addition
+                db.Execute("UPDATE tblProducts SET CurrentQty = @NewQty WHERE ProductID = @PID", new { NewQty = newBalanceQty, PID = product.ProductID });
+
+                // 2. Write to specific Stock In ledger
+                db.Execute(@"INSERT INTO tblStockIn (ProductID, Quantity, ReferenceNo, Reason, CreatedBy, CreatedDate) 
+                             VALUES (@ProductID, @Quantity, @ReferenceNo, @Reason, @CreatedBy, GETDATE())",
+                             new { ProductID = product.ProductID, Quantity = qtyToAdd, ReferenceNo = reference, Reason = reason, CreatedBy = userId });
+
+                // 3. Write to the master Transaction History ledger (Type: IN)
+                db.Execute(@"INSERT INTO tblInventoryTransactions (ProductID, TransactionType, Quantity, BalanceQty, ReferenceNo, Reason, CreatedBy, CreatedDate) 
+                             VALUES (@ProductID, 'IN', @Quantity, @BalanceQty, @ReferenceNo, @Reason, @CreatedBy, GETDATE())",
+                             new { ProductID = product.ProductID, Quantity = qtyToAdd, BalanceQty = newBalanceQty, ReferenceNo = reference, Reason = reason, CreatedBy = userId });
+
+                ShowAlert($"Received {qtyToAdd} units of '{product.ProductName}' successfully under '{reason}'.", "alert-success");
+                ResetContext();
             }
         }
 
-        private void LoadRecentTransactions()
+        private void ResetContext()
         {
-            using (var db = DBHelper.GetConnection())
-            {
-                string sql = @"
-                    SELECT TOP 5 p.ProductName, t.ReferenceNo, t.Quantity, t.CreatedDate AS TransactionTime 
-                    FROM tblInventoryTransactions t 
-                    INNER JOIN tblProducts p ON t.ProductID = p.ProductID 
-                    WHERE t.TransactionType = 'IN' AND CONVERT(date, t.CreatedDate) = CONVERT(date, GETDATE())
-                    ORDER BY t.CreatedDate DESC";
-
-                using (var reader = db.ExecuteReader(sql))
-                {
-                    DataTable dt = new DataTable();
-                    dt.Load(reader);
-
-                    rptRecentTransactions.DataSource = dt;
-                    rptRecentTransactions.DataBind();
-                    lblTransactionCount.Text = $"{dt.Rows.Count} transactions today";
-                }
-            }
+            txtBarcode.Text = "";
+            txtQty.Text = "";
+            txtReference.Text = "SI-" + DateTime.Now.ToString("yyyyMMddHHmmss");
+            pnlProductContext.Visible = false;
+            phNoProduct.Visible = true;
+            txtBarcode.Focus();
         }
 
-        private void GenerateReferenceNumber() => txtReference.Text = $"SI-{DateTime.Now:yyyyMMddHHmmss}";
-
-        private void ClearProductDetails()
+        private void ShowAlert(string text, string cssClass)
         {
-            ViewState["CurrentProductID"] = null;
-            ViewState["CurrentStock"] = null;
-            lblProductName.Text = "-";
-            lblSKU.Text = "-";
-            lblCategory.Text = "-";
-            lblCurrentStock.Text = "0 units";
-            lblSummaryCurrent.Text = "0";
-            txtQuantity.Text = "";
-            UpdateSummaryMath();
+            pnlMessage.Visible = true;
+            pnlMessage.CssClass = "alert " + cssClass + " mb-3 small fw-semibold";
+            lblMessage.Text = text;
         }
-
-        protected void btnClear_Click(object sender, EventArgs e) => Response.Redirect("StockIn.aspx");
     }
 }

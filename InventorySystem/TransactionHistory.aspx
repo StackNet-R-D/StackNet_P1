@@ -19,12 +19,12 @@
                     <div class="input-group input-group-sm">
                         <span class="input-group-text bg-white text-muted border-end-0"><i class="bi bi-search"></i></span>
                         <asp:TextBox ID="txtSearch" runat="server" CssClass="form-control border-start-0 ps-0" 
-                            placeholder="Search by Reference No or Product Name..." AutoPostBack="true" OnTextChanged="btnSearch_Click"></asp:TextBox>
+                            placeholder="Search by Reference No, Reason or Product Name..." AutoPostBack="true" OnTextChanged="btnSearch_Click"></asp:TextBox>
                         <asp:Button ID="btnSearch" runat="server" Text="Search Logs" CssClass="btn btn-light border fw-bold" OnClick="btnSearch_Click" />
                     </div>
                 </div>
                 <div class="col-md-6 text-end text-muted small">
-                    Showing latest 100 records
+                    Displaying trailing 100 system operations ledger entries
                 </div>
             </div>
         </div>
@@ -59,12 +59,20 @@
                             </ItemTemplate>
                         </asp:TemplateField>
 
+                        <asp:TemplateField HeaderText="Context / Reason">
+                            <ItemTemplate>
+                                <span class="text-dark fw-semibold small">
+                                    <%# Eval("Reason") != DBNull.Value && !string.IsNullOrEmpty(Eval("Reason").ToString()) ? Eval("Reason") : "<span class='text-muted fw-normal'>Supplier Intake</span>" %>
+                                </span>
+                            </ItemTemplate>
+                        </asp:TemplateField>
+
                         <asp:BoundField DataField="Username" HeaderText="Processed By" ItemStyle-CssClass="text-muted small pe-3" />
                     </Columns>
                     
                     <EmptyDataTemplate>
                         <div class="text-center p-5 text-muted">
-                            <p class="mb-0">No matching logs found.</p>
+                            <p class="mb-0">No matching log data recorded inside target window filter limits.</p>
                         </div>
                     </EmptyDataTemplate>
                 </asp:GridView>

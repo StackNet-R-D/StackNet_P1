@@ -31,6 +31,7 @@ namespace InventorySystem
                         p.ProductName,
                         t.TransactionType,
                         t.Quantity,
+                        t.Reason,
                         u.Username
                     FROM tblInventoryTransactions t
                     INNER JOIN tblProducts p ON t.ProductID = p.ProductID
@@ -41,7 +42,7 @@ namespace InventorySystem
 
                 if (!string.IsNullOrWhiteSpace(txtSearch.Text))
                 {
-                    sql += " AND (t.ReferenceNo LIKE @Search OR p.ProductName LIKE @Search) ";
+                    sql += " AND (t.ReferenceNo LIKE @Search OR p.ProductName LIKE @Search OR t.Reason LIKE @Search) ";
                     parameters.Add("@Search", "%" + txtSearch.Text.Trim() + "%");
                 }
 
