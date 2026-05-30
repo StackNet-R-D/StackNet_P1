@@ -1,38 +1,38 @@
 ﻿using System;
 using System.Data;
 using System.Web.UI;
-using System.Globalization; // Required for exact date parsing
 using Dapper;
 
 namespace InventorySystem
 {
     public partial class StockMovementReport : System.Web.UI.Page
     {
+        // Public properties to pass data to the frontend Print Headers
+        public string GeneratedDate { get; set; }
+        public string PrintDateRange { get; set; }
+
         protected void Page_Load(object sender, EventArgs e)
         {
             if (!IsPostBack)
             {
-                // Set default date range: Last 7 days to Today
+                // Default to last 7 days for the MVP
                 txtStartDate.Text = DateTime.Now.AddDays(-7).ToString("yyyy-MM-dd");
                 txtEndDate.Text = DateTime.Now.ToString("yyyy-MM-dd");
-
-                LoadReportData();
+                LoadReport();
             }
         }
 
-        protected void btnGenerate_Click(object sender, EventArgs e)
+        protected void btnFilter_Click(object sender, EventArgs e)
         {
-            LoadReportData();
+            LoadReport();
         }
 
-        // Added this so the dropdown automatically filters when changed
-        protected void ddlType_SelectedIndexChanged(object sender, EventArgs e)
+        private void LoadReport()
         {
-            LoadReportData();
-        }
+            // Set the print header variables
+            GeneratedDate = DateTime.Now.ToString("MM/dd/yyyy, hh:mm:ss tt");
+            PrintDateRange = $"{txtStartDate.Text} to {txtEndDate.Text}";
 
-        private void LoadReportData()
-        {
             using (var db = DBHelper.GetConnection())
             {
                 string sql = @"
@@ -42,29 +42,19 @@ namespace InventorySystem
                         p.ProductName,
                         t.TransactionType,
                         t.Quantity,
+                        t.Reason,
                         t.BalanceQty,
                         u.Username
                     FROM tblInventoryTransactions t
                     INNER JOIN tblProducts p ON t.ProductID = p.ProductID
                     INNER JOIN tblUsers u ON t.CreatedBy = u.UserID
-                    WHERE 1=1 "; // 1=1 makes adding dynamic AND clauses easy
+                    WHERE CAST(t.CreatedDate AS DATE) >= @StartDate 
+                      AND CAST(t.CreatedDate AS DATE) <= @EndDate ";
 
                 var parameters = new DynamicParameters();
+                parameters.Add("@StartDate", txtStartDate.Text);
+                parameters.Add("@EndDate", txtEndDate.Text);
 
-                // FIX: Safely parse HTML5 dates regardless of your Windows regional settings
-                if (DateTime.TryParseExact(txtStartDate.Text, "yyyy-MM-dd", CultureInfo.InvariantCulture, DateTimeStyles.None, out DateTime startDate))
-                {
-                    sql += " AND CONVERT(date, t.CreatedDate) >= @StartDate ";
-                    parameters.Add("@StartDate", startDate);
-                }
-
-                if (DateTime.TryParseExact(txtEndDate.Text, "yyyy-MM-dd", CultureInfo.InvariantCulture, DateTimeStyles.None, out DateTime endDate))
-                {
-                    sql += " AND CONVERT(date, t.CreatedDate) <= @EndDate ";
-                    parameters.Add("@EndDate", endDate);
-                }
-
-                // Apply IN/OUT filter if selected
                 if (ddlType.SelectedValue != "ALL")
                 {
                     sql += " AND t.TransactionType = @Type ";
@@ -81,7 +71,7 @@ namespace InventorySystem
                     gvMovementReport.DataSource = dt;
                     gvMovementReport.DataBind();
 
-                    lblRecordCount.Text = $"{dt.Rows.Count} records";
+                    lblRecordCount.Text = dt.Rows.Count.ToString();
                 }
             }
         }
