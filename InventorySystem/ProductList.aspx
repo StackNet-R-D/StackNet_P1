@@ -25,6 +25,17 @@
                     <span class="text-muted small fw-semibold">Products / All Products</span>
                 </div>
                 <div class="d-flex gap-2">
+                    
+                    <%-- Hidden FileUpload and Trigger Button for CSV --%>
+                    <asp:FileUpload ID="fileUploadCsv" runat="server" CssClass="d-none" onchange="document.getElementById('MainContent_btnImportCsv').click();" />
+                    
+                    <button type="button" class="btn btn-outline-success btn-sm px-3 rounded-2 d-flex align-items-center gap-2 fw-bold border" onclick="document.getElementById('<%= fileUploadCsv.ClientID %>').click();">
+                        <i class="bi bi-filetype-csv"></i> Import CSV
+                    </button>
+                    
+                    <%-- Hidden ASP.NET Button to handle the postback --%>
+                    <asp:Button ID="btnImportCsv" runat="server" Text="Import" OnClick="btnImportCsv_Click" CssClass="d-none" />
+
                     <asp:LinkButton ID="btnExport" runat="server" CssClass="btn btn-outline-secondary btn-sm px-3 rounded-2 d-flex align-items-center gap-2 fw-bold text-dark border">
                         <i class="bi bi-download"></i> Export
                     </asp:LinkButton>
@@ -69,7 +80,7 @@
                 </div>
             </div>
 
-            <%-- Data Table Section (Now with AllowPaging) --%>
+            <%-- Data Table Section --%>
             <div class="table-responsive">
                 <asp:GridView ID="gvProducts" runat="server" AutoGenerateColumns="False" 
                     CssClass="table table-hover align-middle mb-0" 
@@ -107,7 +118,7 @@
                         
                         <asp:TemplateField HeaderText="Current Qty">
                             <ItemTemplate>
-                                <span class='<%# Convert.ToInt32(DataBinder.Eval(Container.DataItem, "CurrentQty")) < Convert.ToInt32(DataBinder.Eval(Container.DataItem, "MinimumQty")) ? "text-danger fw-bold small" : "text-success fw-bold small" %>'>
+                                <span class='<%# Convert.ToInt32(DataBinder.Eval(Container.DataItem, "CurrentQty")) <= Convert.ToInt32(DataBinder.Eval(Container.DataItem, "MinimumQty")) ? "text-danger fw-bold small" : "text-success fw-bold small" %>'>
                                     <%# DataBinder.Eval(Container.DataItem, "CurrentQty") %>
                                 </span>
                             </ItemTemplate>

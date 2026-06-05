@@ -1,7 +1,6 @@
 ﻿using System;
 using System.Data;
-using System.Web.UI;
-using System.Web.UI.WebControls;
+using System.Data.SqlClient;
 using Dapper;
 
 namespace InventorySystem
@@ -14,171 +13,104 @@ namespace InventorySystem
             {
                 LoadRoles();
 
-                // Get the UserID from the URL
-                if (Request.QueryString["id"] != null && int.TryParse(Request.QueryString["id"], out int userId))
+                if (Request.QueryString["id"] != null)
                 {
+                    int userId = Convert.ToInt32(Request.QueryString["id"]);
                     hfUserID.Value = userId.ToString();
                     LoadUserData(userId);
                 }
                 else
                 {
-                    Response.Redirect("UserList.aspx");
+                    Response.Redirect("~/UserList.aspx");
                 }
             }
         }
 
         private void LoadRoles()
         {
-            try
+            using (var db = DBHelper.GetConnection())
             {
-                using (var db = DBHelper.GetConnection())
+                // FIX: Use ExecuteReader and DataTable to avoid the DapperRow error
+                string sql = "SELECT RoleID, RoleName FROM tblRoles ORDER BY RoleID";
+                using (var reader = db.ExecuteReader(sql))
                 {
-                    using (var reader = db.ExecuteReader("SELECT RoleID, RoleName FROM tblRoles ORDER BY RoleID"))
-                    {
-                        DataTable dt = new DataTable();
-                        dt.Load(reader);
+                    DataTable dt = new DataTable();
+                    dt.Load(reader);
 
-                        ddlRole.DataSource = dt;
-                        ddlRole.DataTextField = "RoleName";
-                        ddlRole.DataValueField = "RoleID";
-                        ddlRole.DataBind();
-                    }
+                    ddlRole.DataSource = dt;
+                    ddlRole.DataTextField = "RoleName";
+                    ddlRole.DataValueField = "RoleID";
+                    ddlRole.DataBind();
                 }
-            }
-            catch (Exception ex)
-            {
-                ShowError("Error loading roles: " + ex.Message);
             }
         }
 
         private void LoadUserData(int userId)
         {
-            try
+            using (var db = DBHelper.GetConnection())
             {
-                using (var db = DBHelper.GetConnection())
+                var user = db.QueryFirstOrDefault("SELECT * FROM tblUsers WHERE UserID = @ID", new { ID = userId });
+                if (user != null)
                 {
-                    string sql = "SELECT FullName, Username, RoleID, Status FROM tblUsers WHERE UserID = @ID";
-                    var user = db.QueryFirstOrDefault(sql, new { ID = userId });
-
-                    if (user != null)
-                    {
-                        txtFullName.Text = user.FullName;
-                        txtUsername.Text = user.Username;
-
-                        if (user.RoleID != null)
-                        {
-                            ddlRole.SelectedValue = user.RoleID.ToString();
-                        }
-                        if (user.Status != null)
-                        {
-                            ddlStatus.SelectedValue = user.Status.ToString();
-                        }
-
-                        // Prevent locking out the main admin account by accident
-                        if (userId == 1)
-                        {
-                            ddlStatus.Enabled = false;
-                            ddlRole.Enabled = false;
-                        }
-                    }
-                    else
-                    {
-                        ShowError("User not found.");
-                        btnUpdate.Enabled = false;
-                    }
+                    txtFullName.Text = user.FullName;
+                    txtUsername.Text = user.Username;
+                    ddlRole.SelectedValue = user.RoleID.ToString();
+                    ddlStatus.SelectedValue = user.Status;
                 }
-            }
-            catch (Exception ex)
-            {
-                ShowError("Error loading user data: " + ex.Message);
             }
         }
 
         protected void btnUpdate_Click(object sender, EventArgs e)
         {
-            pnlMessage.Visible = false;
-            pnlSuccess.Visible = false;
-
-            if (string.IsNullOrWhiteSpace(txtFullName.Text) || string.IsNullOrWhiteSpace(txtUsername.Text))
-            {
-                ShowError("Full Name and Username are required.");
-                return;
-            }
-
-            int userId = Convert.ToInt32(hfUserID.Value);
-
             try
             {
+                int userId = Convert.ToInt32(hfUserID.Value);
+                string fullName = txtFullName.Text.Trim();
+                string username = txtUsername.Text.Trim();
+                int roleId = Convert.ToInt32(ddlRole.SelectedValue);
+                string status = ddlStatus.SelectedValue;
+                string newPassword = txtPassword.Text.Trim();
+
                 using (var db = DBHelper.GetConnection())
                 {
-                    // Check for duplicate username (ignoring the current user's own ID)
-                    int count = db.ExecuteScalar<int>("SELECT COUNT(1) FROM tblUsers WHERE Username = @Username AND UserID != @ID",
-                        new { Username = txtUsername.Text.Trim(), ID = userId });
-
-                    if (count > 0)
+                    // Check if username exists for a DIFFERENT user
+                    var existing = db.QueryFirstOrDefault("SELECT UserID FROM tblUsers WHERE Username = @Username AND UserID != @ID", new { Username = username, ID = userId });
+                    if (existing != null)
                     {
-                        ShowError("Another user is already using this Username.");
+                        pnlMessage.Visible = true;
+                        pnlSuccess.Visible = false;
+                        lblMessage.Text = "Username is already taken by another user.";
                         return;
                     }
 
-                    // Logic to handle optional password change
-                    if (!string.IsNullOrWhiteSpace(txtPassword.Text))
+                    if (!string.IsNullOrEmpty(newPassword))
                     {
-                        // Update everything INCLUDING the new hashed password
-                        string passwordHash = BCrypt.Net.BCrypt.HashPassword(txtPassword.Text);
-                        string sql = @"
-                            UPDATE tblUsers SET 
-                                FullName = @FullName, 
-                                Username = @Username, 
-                                PasswordHash = @PasswordHash, 
-                                RoleID = @RoleID, 
-                                Status = @Status 
-                            WHERE UserID = @ID";
+                        // Update WITH new hashed password
+                        string hashedPassword = BCrypt.Net.BCrypt.HashPassword(newPassword);
+                        string sql = @"UPDATE tblUsers SET FullName = @FullName, Username = @Username, 
+                                       PasswordHash = @Hash, RoleID = @RoleID, Status = @Status WHERE UserID = @ID";
 
-                        db.Execute(sql, new
-                        {
-                            ID = userId,
-                            FullName = txtFullName.Text.Trim(),
-                            Username = txtUsername.Text.Trim(),
-                            PasswordHash = passwordHash,
-                            RoleID = Convert.ToInt32(ddlRole.SelectedValue),
-                            Status = ddlStatus.SelectedValue
-                        });
+                        db.Execute(sql, new { FullName = fullName, Username = username, Hash = hashedPassword, RoleID = roleId, Status = status, ID = userId });
                     }
                     else
                     {
-                        // Update everything EXCEPT the password
-                        string sql = @"
-                            UPDATE tblUsers SET 
-                                FullName = @FullName, 
-                                Username = @Username, 
-                                RoleID = @RoleID, 
-                                Status = @Status 
-                            WHERE UserID = @ID";
+                        // Update WITHOUT changing password
+                        string sql = @"UPDATE tblUsers SET FullName = @FullName, Username = @Username, 
+                                       RoleID = @RoleID, Status = @Status WHERE UserID = @ID";
 
-                        db.Execute(sql, new
-                        {
-                            ID = userId,
-                            FullName = txtFullName.Text.Trim(),
-                            Username = txtUsername.Text.Trim(),
-                            RoleID = Convert.ToInt32(ddlRole.SelectedValue),
-                            Status = ddlStatus.SelectedValue
-                        });
+                        db.Execute(sql, new { FullName = fullName, Username = username, RoleID = roleId, Status = status, ID = userId });
                     }
-
-                    pnlSuccess.Visible = true;
                 }
+
+                pnlSuccess.Visible = true;
+                pnlMessage.Visible = false;
             }
             catch (Exception ex)
             {
-                ShowError("An error occurred while updating: " + ex.Message);
+                pnlMessage.Visible = true;
+                pnlSuccess.Visible = false;
+                lblMessage.Text = "Error updating user: " + ex.Message;
             }
-        }
-
-        private void ShowError(string message)
-        {
-            pnlMessage.Visible = true;
-            lblMessage.Text = message;
         }
     }
 }

@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Data;
+using System.IO; // Required for reading the CSV file
 using System.Linq;
 using System.Web.UI;
 using System.Web.UI.WebControls;
@@ -23,7 +24,6 @@ namespace InventorySystem
         {
             using (var db = DBHelper.GetConnection())
             {
-                // CORRECTED: Using ExecuteReader and DataTable to avoid the DapperRow reflection error
                 string sql = "SELECT CategoryID, CategoryName FROM tblCategories ORDER BY CategoryName";
 
                 using (var reader = db.ExecuteReader(sql))
@@ -48,7 +48,7 @@ namespace InventorySystem
             {
                 // Start with a base query
                 string sql = @"SELECT p.ProductID, p.ProductName, p.Barcode, c.CategoryName, p.CostPrice, 
-                                      p.SellingPrice, p.CurrentQty, p.MinimumQty, p.Status 
+                                      p.SellingPrice, p.CurrentQty, ISNULL(p.MinimumQty, 0) AS MinimumQty, p.Status 
                                FROM tblProducts p 
                                LEFT JOIN tblCategories c ON p.CategoryID = c.CategoryID
                                WHERE 1=1 ";
@@ -125,6 +125,63 @@ namespace InventorySystem
                     db.Execute("DELETE FROM tblProducts WHERE ProductID = @ID", new { ID = productID });
                 }
                 LoadProducts();
+            }
+        }
+
+        // --- NEW: CSV Import Handler ---
+        protected void btnImportCsv_Click(object sender, EventArgs e)
+        {
+            if (fileUploadCsv.HasFile)
+            {
+                try
+                {
+                    using (StreamReader reader = new StreamReader(fileUploadCsv.PostedFile.InputStream))
+                    {
+                        using (var db = DBHelper.GetConnection())
+                        {
+                            // Skip the header row of the CSV
+                            if (!reader.EndOfStream)
+                            {
+                                reader.ReadLine();
+                            }
+
+                            while (!reader.EndOfStream)
+                            {
+                                string line = reader.ReadLine();
+                                if (string.IsNullOrWhiteSpace(line)) continue;
+
+                                string[] values = line.Split(',');
+
+                                // Ensure the CSV has exactly 7 columns as expected
+                                if (values.Length >= 7)
+                                {
+                                    string sql = @"INSERT INTO tblProducts 
+                                                  (Barcode, ProductName, CategoryID, CostPrice, SellingPrice, MinimumQty, CurrentQty)
+                                                  VALUES 
+                                                  (@Barcode, @ProductName, @CategoryID, @CostPrice, @SellingPrice, @MinimumQty, @CurrentQty)";
+
+                                    db.Execute(sql, new
+                                    {
+                                        Barcode = values[0].Trim(),
+                                        ProductName = values[1].Trim(),
+                                        CategoryID = Convert.ToInt32(values[2].Trim()),
+                                        CostPrice = Convert.ToDecimal(values[3].Trim()),
+                                        SellingPrice = Convert.ToDecimal(values[4].Trim()),
+                                        MinimumQty = Convert.ToInt32(values[5].Trim()),
+                                        CurrentQty = Convert.ToInt32(values[6].Trim())
+                                    });
+                                }
+                            }
+                        }
+
+                        // Refresh the grid to show the newly imported items
+                        LoadProducts();
+                    }
+                }
+                catch (Exception)
+                {
+                    // In a production environment, you might display an error label here.
+                }
             }
         }
     }
