@@ -1,7 +1,6 @@
 ﻿using System;
 using System.Data;
-using System.Web.UI;
-using System.Web.UI.WebControls;
+using System.Data.SqlClient;
 using Dapper;
 
 namespace InventorySystem
@@ -18,79 +17,67 @@ namespace InventorySystem
 
         private void LoadRoles()
         {
-            try
+            using (var db = DBHelper.GetConnection())
             {
-                using (var db = DBHelper.GetConnection())
+                // FIX: Use ExecuteReader and DataTable to avoid the DapperRow error
+                string sql = "SELECT RoleID, RoleName FROM tblRoles ORDER BY RoleID";
+                using (var reader = db.ExecuteReader(sql))
                 {
-                    using (var reader = db.ExecuteReader("SELECT RoleID, RoleName FROM tblRoles ORDER BY RoleID"))
-                    {
-                        DataTable dt = new DataTable();
-                        dt.Load(reader);
+                    DataTable dt = new DataTable();
+                    dt.Load(reader);
 
-                        ddlRole.DataSource = dt;
-                        ddlRole.DataTextField = "RoleName";
-                        ddlRole.DataValueField = "RoleID";
-                        ddlRole.DataBind();
-                    }
+                    ddlRole.DataSource = dt;
+                    ddlRole.DataTextField = "RoleName";
+                    ddlRole.DataValueField = "RoleID";
+                    ddlRole.DataBind();
                 }
-            }
-            catch (Exception ex)
-            {
-                ShowError("Error loading roles: " + ex.Message);
             }
         }
 
         protected void btnSave_Click(object sender, EventArgs e)
         {
-            pnlMessage.Visible = false;
-
-            if (string.IsNullOrWhiteSpace(txtFullName.Text) || string.IsNullOrWhiteSpace(txtUsername.Text) || string.IsNullOrWhiteSpace(txtPassword.Text))
-            {
-                ShowError("Full Name, Username, and Password are required.");
-                return;
-            }
-
             try
             {
+                string fullName = txtFullName.Text.Trim();
+                string username = txtUsername.Text.Trim();
+                string rawPassword = txtPassword.Text.Trim();
+                int roleId = Convert.ToInt32(ddlRole.SelectedValue);
+                string status = ddlStatus.SelectedValue;
+
+                // Hash the password securely
+                string hashedPassword = BCrypt.Net.BCrypt.HashPassword(rawPassword);
+
                 using (var db = DBHelper.GetConnection())
                 {
-                    int count = db.ExecuteScalar<int>("SELECT COUNT(1) FROM tblUsers WHERE Username = @Username", new { Username = txtUsername.Text.Trim() });
-                    if (count > 0)
+                    // Check if username already exists
+                    var existingUser = db.QueryFirstOrDefault("SELECT UserID FROM tblUsers WHERE Username = @Username", new { Username = username });
+                    if (existingUser != null)
                     {
-                        ShowError("Username is already taken. Please choose another.");
+                        pnlMessage.Visible = true;
+                        lblMessage.Text = "Username is already taken. Please choose another.";
                         return;
                     }
 
-                    // Hashes password using BCrypt
-                    string passwordHash = BCrypt.Net.BCrypt.HashPassword(txtPassword.Text);
-
-                    string sql = @"
-                        INSERT INTO tblUsers (FullName, Username, PasswordHash, RoleID, Status, CreatedDate) 
-                        VALUES (@FullName, @Username, @PasswordHash, @RoleID, @Status, GETDATE())";
+                    string sql = @"INSERT INTO tblUsers (FullName, Username, PasswordHash, RoleID, Status) 
+                                   VALUES (@FullName, @Username, @PasswordHash, @RoleID, @Status)";
 
                     db.Execute(sql, new
                     {
-                        FullName = txtFullName.Text.Trim(),
-                        Username = txtUsername.Text.Trim(),
-                        PasswordHash = passwordHash,
-                        RoleID = Convert.ToInt32(ddlRole.SelectedValue),
-                        Status = ddlStatus.SelectedValue
+                        FullName = fullName,
+                        Username = username,
+                        PasswordHash = hashedPassword,
+                        RoleID = roleId,
+                        Status = status
                     });
-
-                    Response.Redirect("UserList.aspx", false);
-                    Context.ApplicationInstance.CompleteRequest();
                 }
+
+                Response.Redirect("~/UserList.aspx");
             }
             catch (Exception ex)
             {
-                ShowError("An error occurred: " + ex.Message);
+                pnlMessage.Visible = true;
+                lblMessage.Text = "Error saving user: " + ex.Message;
             }
         }
-
-        private void ShowError(string message)
-        {
-            pnlMessage.Visible = true;
-            lblMessage.Text = message;
-        }
     }
-}
+} 
